@@ -12,6 +12,7 @@ import "time"
 type header struct {
 	prevBlock string
 	merkleRoot string
+	merkleRootTest string
 	timeStamp string
 	numTransactions string
 	targetDiff string
@@ -60,33 +61,35 @@ func main() {
 	fmt.Println("-------------------------------")
 	var head header
 	byteC += 8
-	head.prevBlock = convert(string(testBlock[byteC:byteC+64]))
+	head.prevBlock = convertEndian(string(testBlock[byteC:byteC+64]))
 	byteC += 64
-	head.merkleRoot = convert(string(testBlock[byteC:byteC+64]))
+	head.merkleRoot = convertEndian(string(testBlock[byteC:byteC+64]))
+	head.merkleRootTest = string(testBlock[byteC:byteC+64])
 	byteC += 64
-	head.timeStamp = convert(string(testBlock[byteC:byteC+8]))
+	head.timeStamp = convertEndian(string(testBlock[byteC:byteC+8]))
 	byteC += 8
-	head.targetDiff = convert(string(testBlock[byteC:byteC+8]))
+	head.targetDiff = convertEndian(string(testBlock[byteC:byteC+8]))
 	byteC += 8
-	head.nonce = convert(string(testBlock[byteC:byteC+8]))
+	head.nonce = convertEndian(string(testBlock[byteC:byteC+8]))
 	byteC += 8
 
 	//account for variable langth
-	varLengthNumTrans := convert(string(testBlock[byteC:byteC+2]))
+	varLengthNumTrans := convertEndian(string(testBlock[byteC:byteC+2]))
 
 	if varLengthNumTrans!="fd" && varLengthNumTrans!="fe" && varLengthNumTrans!="ff" {
-		head.numTransactions = convert(string(testBlock[byteC:byteC+2]))
+		head.numTransactions = convertEndian(string(testBlock[byteC:byteC+2]))
 		byteC += 2
 	} else {
 		jump := varLength(varLengthNumTrans)
-		head.numTransactions = convert(string(testBlock[byteC+2:byteC+jump]))
+		head.numTransactions = convertEndian(string(testBlock[byteC+2:byteC+jump]))
 		byteC += jump
 	}
 
 	
 	fmt.Println("previous block: ", head.prevBlock)
+	fmt.Println("merkle root test: ", head.merkleRootTest)
 	fmt.Println("merkle root: ", head.merkleRoot)
-	timeStamp := toHex(head.timeStamp)
+	timeStamp := fromHex(head.timeStamp)
 	fmt.Println("timestamp: ", timeStamp, "(unix time)")
 	// date, err := strconv.ParseInt("1405544146", 10, 64)
     // if err != nil {
@@ -97,7 +100,7 @@ func main() {
 	fmt.Println("target difficulty: ", head.targetDiff)
 	fmt.Println("nonce: ", head.nonce)
 	fmt.Println("variable length: ", varLengthNumTrans)
-	fmt.Println("number of transactions: ", toHex(head.numTransactions))
+	fmt.Println("number of transactions: ", fromHex(head.numTransactions))
 
 	////////////////start transaction loop////////////////////////////////
 	/* Transaction Version # */
@@ -106,47 +109,47 @@ func main() {
 
 	for i:=1; i<=5; i++ {
 
-	transactions[i].transVersion = convert(string(testBlock[byteC:byteC+8]))
+	transactions[i].transVersion = convertEndian(string(testBlock[byteC:byteC+8]))
 	byteC += 8
 
 	//////////////////////start number of inputs loop////////////////////
 	 
-	transactions[i].numInputs = convert(string(testBlock[byteC:byteC+2]))
+	transactions[i].numInputs = convertEndian(string(testBlock[byteC:byteC+2]))
 	byteC += 2
 
-	for k:=1;k<=toHex(transactions[i].numInputs);k++ {
+	for k:=1;k<=fromHex(transactions[i].numInputs);k++ {
 		//fmt.Println("***Input ", i, "***")
-		transactions[i].prevTrans[k] = convert(string(testBlock[byteC:byteC+64]))
+		transactions[i].prevTrans[k] = convertEndian(string(testBlock[byteC:byteC+64]))
 		byteC += 64
-		transactions[i].transIndex = convert(string(testBlock[byteC:byteC+8]))
+		transactions[i].transIndex = convertEndian(string(testBlock[byteC:byteC+8]))
 		byteC += 8
 		//account for variable langth
-		scriptLengthVar := convert(string(testBlock[byteC:byteC+2]))
+		scriptLengthVar := convertEndian(string(testBlock[byteC:byteC+2]))
 		//fmt.Println(scriptLengthVar)
     	if scriptLengthVar!="fd" && scriptLengthVar!="fe" && scriptLengthVar!="ff" {
-			transactions[i].scriptLength = convert(string(testBlock[byteC:byteC+2]))
+			transactions[i].scriptLength = convertEndian(string(testBlock[byteC:byteC+2]))
 			byteC += 2
 		} else {
 			jump := varLength(scriptLengthVar)
-			transactions[i].scriptLength = convert(string(testBlock[byteC+2:byteC+jump]))
+			transactions[i].scriptLength = convertEndian(string(testBlock[byteC+2:byteC+jump]))
 			byteC += jump
 		}
-		byteC += toHex(transactions[i].scriptLength)*2
+		byteC += fromHex(transactions[i].scriptLength)*2
 		byteC += 8
 		
 	}
 
 	//////////////////////end number of inputs loop////////////////////
 
-	transactions[i].numOutputs = convert(string(testBlock[byteC:byteC+2]))
+	transactions[i].numOutputs = convertEndian(string(testBlock[byteC:byteC+2]))
 	byteC += 2
 
 	fmt.Println("-------------------------------")
 	fmt.Println("Transaction", i, "Inputs")
 	fmt.Println("-------------------------------")
 
-	fmt.Println("version number: ", toHex(transactions[i].transVersion))
-	numberInputs := toHex(transactions[i].numInputs)
+	fmt.Println("version number: ", fromHex(transactions[i].transVersion))
+	numberInputs := fromHex(transactions[i].numInputs)
 	fmt.Println("number of inputs: ", numberInputs)
 	///previous transactions loop start/////////
 	for p:=1; p<=numberInputs; p++ {
@@ -154,19 +157,19 @@ func main() {
 	}
 	/////////////////start of outputs loop////////////////
 
-	for j:=1;j<=toHex(transactions[i].numOutputs);j++ {
-	transactions[i].amountBTC = convert(string(testBlock[byteC:byteC+16]))
+	for j:=1;j<=fromHex(transactions[i].numOutputs);j++ {
+	transactions[i].amountBTC = convertEndian(string(testBlock[byteC:byteC+16]))
 	byteC += 16
-	transactions[i].pkScript_length = convert(string(testBlock[byteC:byteC+2]))
+	transactions[i].pkScript_length = convertEndian(string(testBlock[byteC:byteC+2]))
 	byteC += 2
 	//fmt.Println(string(testBlock[byteC:byteC+6]))
 	byteC += 6 //???????????????
-	jump := toHex(transactions[i].pkScript_length) *2 -6 -4
+	jump := fromHex(transactions[i].pkScript_length) *2 -6 -4
 	transactions[i].pkScript = string(testBlock[byteC:byteC+jump])
 	byteC += jump
-	//fmt.Println(convert(string(testBlock[byteC:byteC+4]))) //lock time + 88ac
+	//fmt.Println(convertEndian(string(testBlock[byteC:byteC+4]))) //lock time + 88ac
 	byteC += 4
-	numberOutputs := toHex(transactions[i].numOutputs)
+	numberOutputs := fromHex(transactions[i].numOutputs)
 	if j==numberOutputs {
 		byteC += 8 //lock time - just at end of outputs
 	}
@@ -180,10 +183,12 @@ func main() {
 
 	///previous transactions loop end///////
 	fmt.Println("transaction index: ", transactions[i].transIndex)
-	fmt.Println("script length: ", toHex(transactions[i].scriptLength), "bytes")
+	fmt.Println("script length: ", fromHex(transactions[i].scriptLength), "bytes")
 	fmt.Println("number of outputs: ", numberOutputs)
-	fmt.Println("amount: ", float64(toHex(transactions[i].amountBTC))/100000000, "BTC")
-	fmt.Println("pk_script length: ", toHex(transactions[i].pkScript_length), "bytes")
+	fmt.Println("amount: ", fromHex(transactions[i].amountBTC))
+	fmt.Println("amount: ", transactions[i].amountBTC)
+	fmt.Println("amount: ", float64(fromHex(transactions[i].amountBTC))/100000000, "BTC")
+	fmt.Println("pk_script length: ", fromHex(transactions[i].pkScript_length), "bytes")
 	fmt.Println("receiver address: ", transactions[i].pkScript, "(hash 160)")
 	}
 	//////////////end of outputs loop////////////////
@@ -193,22 +198,22 @@ func main() {
 	}
 	////////////////end transaction loop////////////////////////////////
 
-	//scriptJump := toHex(transactions[i].scriptLength)
-	//byteC += toHex(transactions[i].scriptLength)
-	//toHex(head.numTransactions)
-	//convert(head.prevBlock)
+	//scriptJump := fromHex(transactions[i].scriptLength)
+	//byteC += fromHex(transactions[i].scriptLength)
+	//fromHex(head.numTransactions)
+	//convertEndian(head.prevBlock)
 	// https://blockchain.info/block/000000000000000001f942eb4bfa0aeccb6a14c268f4c72d5fff17270da771b9?format=hex
-	//fmt.Println(toHex("aa"))
+	//fmt.Println(fromHex("aa"))
 }
 
-func convert (conversion string) string{
-	var converted string
+func convertEndian (conversion string) string{
+	var convertEndianed string
 	for i:=0; i < len(conversion); i=i+2 {
-		converted = converted + string(conversion[len(conversion) -i -2])
-		converted = converted + string(conversion[len(conversion) -i -1])	
+		convertEndianed = convertEndianed + string(conversion[len(conversion) -i -2])
+		convertEndianed = convertEndianed + string(conversion[len(conversion) -i -1])	
 	}
-	//fmt.Println(converted)
-	return converted
+	//fmt.Println(convertEndianed)
+	return convertEndianed
 }
 
 func varLength (conversion string) int {
@@ -223,8 +228,8 @@ func varLength (conversion string) int {
 	return byteC
 }
 
-func toHex (conversion string) int {
-	var converted int
+func fromHex (conversion string) int {
+	var convertEndianed int
 	var multiple int
 	for i:=0; i < len(conversion); i++ {
 		amount := 0
@@ -234,14 +239,14 @@ func toHex (conversion string) int {
 			multiple = int(conversion[i]) -48
 		}
 		
-		amount = (multiple * Pow(16, len(conversion) -i -1))
-		converted += amount
+		amount = (multiple * findPower(16, len(conversion) -i -1))
+		convertEndianed += amount
 	}
-	//fmt.Println(converted)
-	return converted
+	//fmt.Println(convertEndianed)
+	return convertEndianed
 }
 
-func Pow(a, b int) int {
+func findPower(a, b int) int {
 	p := 1
 	for b > 0 {
 		if b&1 != 0 {
