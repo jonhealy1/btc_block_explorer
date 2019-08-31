@@ -10,20 +10,22 @@ Enter block hash:
 
 -------------------------------
 Header
--------------------------------
-previous block:  0000000000000000128695d6cc41c1df14916d970075993302dca9534ee53650
-merkle root:  befeb8fcf8e672e028c5c30334b5c42b85c8bd9386bdf794d015b6558f73dc79
-timestamp:  1432720838 (unix time)
-timestamp:  2015-05-27 03:00:38 -0700 PDT (converted)
-target difficulty:  181686f5
-nonce:  c4a295ba
-variable length:  fd
-number of transactions:  372
--------------------------------
-Transaction 1 Inputs
--------------------------------
-version number:  1
-number of inputs:  1
+-------------------------------  
+
+previous block:  0000000000000000128695d6cc41c1df14916d970075993302dca9534ee53650 
+merkle root:  befeb8fcf8e672e028c5c30334b5c42b85c8bd9386bdf794d015b6558f73dc79 
+timestamp:  1432720838 (unix time) 
+timestamp:  2015-05-27 03:00:38 -0700 PDT (converted) 
+target difficulty:  181686f5 
+nonce:  c4a295ba 
+variable length:  fd 
+number of transactions:  372 
+------------------------------- 
+Transaction 1 Inputs 
+------------------------------- 
+ 
+version number:  1 
+number of inputs:  1 
 previous transaction 1 : 0000000000000000000000000000000000000000000000000000000000000000
 -------------------------------
 Transaction 1 Output 1 / 1
