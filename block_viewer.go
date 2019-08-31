@@ -6,6 +6,8 @@ import "io/ioutil"
 import "bufio"
 import "os"
 import "strings"
+import "time"
+//import "strconv"
 
 type header struct {
 	prevBlock string
@@ -84,7 +86,14 @@ func main() {
 	
 	fmt.Println("previous block: ", head.prevBlock)
 	fmt.Println("merkle root: ", head.merkleRoot)
-	fmt.Println("timestamp: ", head.timeStamp)
+	timeStamp := toHex(head.timeStamp)
+	fmt.Println("timestamp: ", timeStamp, "(unix time)")
+	// date, err := strconv.ParseInt("1405544146", 10, 64)
+    // if err != nil {
+    //     panic(err)
+    // }
+    timeNotUnix := time.Unix(int64(timeStamp), 0)
+    fmt.Println("timestamp: ", timeNotUnix, "(converted)")
 	fmt.Println("target difficulty: ", head.targetDiff)
 	fmt.Println("nonce: ", head.nonce)
 	fmt.Println("variable length: ", varLengthNumTrans)
