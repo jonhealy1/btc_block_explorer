@@ -1,0 +1,29 @@
+FROM golang:alpine
+
+# ARG block="000000000000000001643f7706f3dcbc3a386e4c1bfba852ff628d8024f875b6"
+
+# # RUN apk add git
+
+# COPY . /go/src/block_viewer/
+# # RUN go get -u github.com/mediocregopher/radix.v2/redis
+# # RUN go get -u github.com/mediocregopher/radix.v2/pool
+# RUN go get /go/src/block_viewer
+# RUN go install /go/src/block_viewer
+# RUN echo "Installed block_viewer"
+# RUN echo "Oh dang look at that $block"
+
+# ENTRYPOINT /go/bin/block_viewer 
+# COPY entrypoint.sh /
+# ENTRYPOINT ["entrypoint.sh"]
+# CMD ["000000000000000001643f7706f3dcbc3a386e4c1bfba852ff628d8024f875b6"]  # delete this line
+
+
+# FROM golang:latest 
+ARG block="000000000000000001643f7706f3dcbc3a386e4c1bfba852ff628d8024f875b6"
+ENV <key>=<value>
+RUN mkdir /app 
+ADD . /app/ 
+WORKDIR /app 
+RUN go build -o main . 
+# CMD ["/app/main", "000000000000000001643f7706f3dcbc3a386e4c1bfba852ff628d8024f875b6"]
+ENTRYPOINT ["/app/main"]
