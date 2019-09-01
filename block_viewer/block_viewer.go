@@ -29,6 +29,7 @@ type transaction struct {
 }
 
 var byteC int
+var head header
 
 func main() {
 
@@ -45,35 +46,10 @@ func main() {
 	URL := "https://blockchain.info/block/" + arg + "?format=hex"
 	resp, _ := http.Get(URL)
 	testBlock, _ := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
+	resp.Body.Close()	
 	
-	var head header
-	byteC += 8
-	head.prevBlock = convertEndian(string(testBlock[byteC:byteC+64]))
-	byteC += 64
-	head.merkleRoot = convertEndian(string(testBlock[byteC:byteC+64]))
-	head.merkleRootTest = string(testBlock[byteC:byteC+64])
-	byteC += 64
-	head.timeStamp = convertEndian(string(testBlock[byteC:byteC+8]))
-	byteC += 8
-	head.targetDiff = convertEndian(string(testBlock[byteC:byteC+8]))
-	byteC += 8
-	head.nonce = convertEndian(string(testBlock[byteC:byteC+8]))
-	byteC += 8
-
-	//account for variable langth
-	varLengthNumTrans := convertEndian(string(testBlock[byteC:byteC+2]))
-
-	if varLengthNumTrans!="fd" && varLengthNumTrans!="fe" && varLengthNumTrans!="ff" {
-		head.numTransactions = convertEndian(string(testBlock[byteC:byteC+2]))
-		byteC += 2
-	} else {
-		jump := varLength(varLengthNumTrans)
-		head.numTransactions = convertEndian(string(testBlock[byteC+2:byteC+jump]))
-		byteC += jump
-	}
-	
-	displayHeader(head)
+	buildHeader(testBlock)
+	displayHeader()
 
 	////////////////start transaction loop////////////////////////////////
 
@@ -151,6 +127,33 @@ func main() {
 	////////////////end transaction loop////////////////////////////////	
 }
 
+func buildHeader(testBlock []byte) {
+	byteC += 8
+	head.prevBlock = convertEndian(string(testBlock[byteC:byteC+64]))
+	byteC += 64
+	head.merkleRoot = convertEndian(string(testBlock[byteC:byteC+64]))
+	head.merkleRootTest = string(testBlock[byteC:byteC+64])
+	byteC += 64
+	head.timeStamp = convertEndian(string(testBlock[byteC:byteC+8]))
+	byteC += 8
+	head.targetDiff = convertEndian(string(testBlock[byteC:byteC+8]))
+	byteC += 8
+	head.nonce = convertEndian(string(testBlock[byteC:byteC+8]))
+	byteC += 8
+
+	//account for variable langth
+	varLengthNumTrans := convertEndian(string(testBlock[byteC:byteC+2]))
+
+	if varLengthNumTrans!="fd" && varLengthNumTrans!="fe" && varLengthNumTrans!="ff" {
+		head.numTransactions = convertEndian(string(testBlock[byteC:byteC+2]))
+		byteC += 2
+	} else {
+		jump := varLength(varLengthNumTrans)
+		head.numTransactions = convertEndian(string(testBlock[byteC+2:byteC+jump]))
+		byteC += jump
+	}
+}
+
 func displayTransactionInputs(transactions transaction) {
 	fmt.Println("version number: ", fromHex(transactions.transVersion))
 	numberInputs := fromHex(transactions.numInputs)
@@ -170,7 +173,7 @@ func displayTransactionOutputs(transactions transaction) {
 	fmt.Println("receiver address: ", transactions.pkScript, "(hash 160)")
 }
 
-func displayHeader(head header) {
+func displayHeader() {
 	fmt.Println("-------------------------------")
 	fmt.Println("Header")
 	fmt.Println("-------------------------------")
