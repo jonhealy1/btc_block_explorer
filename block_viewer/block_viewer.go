@@ -97,10 +97,7 @@ func main() {
 
 		displayTransactionInputs(transactions[i])
 
-		/////////////////start of outputs loop////////////////
-
 		buildOutput(i, transactions[i], testBlock)
-		//////////////end of outputs loop////////////////
 	}
 	////////////////end transaction loop////////////////////////////////	
 }
