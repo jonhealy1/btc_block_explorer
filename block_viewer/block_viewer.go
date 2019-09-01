@@ -12,7 +12,8 @@ type header struct {
 	merkleRootTest string
 	timeStamp string
 	numTransactions string
-	targetDiff string
+	targetDiff1 string
+	targetDiff2 string
 	nonce string
 }
 
@@ -62,8 +63,20 @@ func main() {
 
 		transactions[i].transVersion = convertEndian(string(testBlock[byteCounter:byteCounter+8]))
 		byteCounter += 8
-		transactions[i].numInputs = convertEndian(string(testBlock[byteCounter:byteCounter+2]))
-		byteCounter += 2
+
+		// transactions[i].numInputs = convertEndian(string(testBlock[byteCounter:byteCounter+2]))
+		// byteCounter += 2
+
+		/* account for variable length and find the number of inputs */
+		varLengthNumTrans := convertEndian(string(testBlock[byteCounter:byteCounter+2]))
+		if varLengthNumTrans!="fd" && varLengthNumTrans!="fe" && varLengthNumTrans!="ff" {
+			transactions[i].numInputs = convertEndian(string(testBlock[byteCounter:byteCounter+2]))
+			byteCounter += 2
+		} else {
+			jump := varLength(varLengthNumTrans)
+			transactions[i].numInputs = convertEndian(string(testBlock[byteCounter+2:byteCounter+jump]))
+			byteCounter += jump
+		}
 
 		//////////////////////start number of inputs loop////////////////////
 		/* loop throught the number of inputs to display previous transactions */
@@ -72,7 +85,8 @@ func main() {
 			byteCounter += 64
 			transactions[i].transIndex = convertEndian(string(testBlock[byteCounter:byteCounter+8]))
 			byteCounter += 8
-			// account for variable langth
+
+			// account for variable langth for script length
 			scriptLengthVar := convertEndian(string(testBlock[byteCounter:byteCounter+2]))
     		if scriptLengthVar!="fd" && scriptLengthVar!="fe" && scriptLengthVar!="ff" {
 				transactions[i].scriptLength = convertEndian(string(testBlock[byteCounter:byteCounter+2]))
@@ -82,13 +96,25 @@ func main() {
 				transactions[i].scriptLength = convertEndian(string(testBlock[byteCounter+2:byteCounter+jump]))
 				byteCounter += jump
 			}
+
 			byteCounter += fromHex(transactions[i].scriptLength)*2
 			byteCounter += 8
 		}
 		//////////////////////end number of inputs loop////////////////////
 	
-		transactions[i].numOutputs = convertEndian(string(testBlock[byteCounter:byteCounter+2]))
-		byteCounter += 2
+		// transactions[i].numOutputs = convertEndian(string(testBlock[byteCounter:byteCounter+2]))
+		// byteCounter += 2
+
+		/* account for variable length and find the number of outputs */
+		varLengthNumTrans2 := convertEndian(string(testBlock[byteCounter:byteCounter+2]))
+		if varLengthNumTrans2!="fd" && varLengthNumTrans2!="fe" && varLengthNumTrans2!="ff" {
+			transactions[i].numOutputs = convertEndian(string(testBlock[byteCounter:byteCounter+2]))
+			byteCounter += 2
+		} else {
+			jump2 := varLength(varLengthNumTrans2)
+			transactions[i].numOutputs = convertEndian(string(testBlock[byteCounter+2:byteCounter+jump2]))
+			byteCounter += jump2
+		}
 
 		fmt.Println("-------------------------------")
 		fmt.Println("Transaction", i, "Inputs")
@@ -103,6 +129,10 @@ func main() {
 	////////////////end transaction loop////////////////////////////////	
 }
 
+func buildVarLength() {
+
+}
+
 /* iterate and build the transaction outputs */
 func buildOutput(i int, transactions transaction, testBlock []byte) {
 	for j:=1;j<=fromHex(transactions.numOutputs);j++ {
@@ -114,7 +144,6 @@ func buildOutput(i int, transactions transaction, testBlock []byte) {
 		jump := fromHex(transactions.pkScript_length) *2 -6 -4
 		transactions.pkScript = string(testBlock[byteCounter:byteCounter+jump])
 		byteCounter += jump
-		//fmt.Println(convertEndian(string(testBlock[byteCounter:byteCounter+4]))) //lock time + 88ac
 		byteCounter += 4
 		numberOutputs := fromHex(transactions.numOutputs)
 		if j==numberOutputs {
@@ -137,8 +166,10 @@ func buildHeader(testBlock []byte) {
 	byteCounter += 64
 	head.timeStamp = convertEndian(string(testBlock[byteCounter:byteCounter+8]))
 	byteCounter += 8
-	head.targetDiff = convertEndian(string(testBlock[byteCounter:byteCounter+8]))
-	byteCounter += 8
+	head.targetDiff1 = convertEndian(string(testBlock[byteCounter:byteCounter+8]))
+	byteCounter += 2
+	head.targetDiff2 = convertEndian(string(testBlock[byteCounter:byteCounter+6]))
+	byteCounter += 6
 	head.nonce = convertEndian(string(testBlock[byteCounter:byteCounter+8]))
 	byteCounter += 8
 
@@ -184,9 +215,15 @@ func displayHeader() {
 	timeStamp := fromHex(head.timeStamp)
 	fmt.Println("timestamp: ", timeStamp, "(unix time)")
     timeNotUnix := time.Unix(int64(timeStamp), 0)
-    fmt.Println("timestamp: ", timeNotUnix, "(converted)")
-	fmt.Println("target difficulty: ", head.targetDiff)
-	fmt.Println("nonce: ", head.nonce)
+	fmt.Println("timestamp: ", timeNotUnix, "(converted)")
+	//difficulty
+	difficult := float64(65535 / float64(fromHex(head.targetDiff2)) * float64(findPower(2,40)))
+	//fmt.Println("Difficulty: ", difficult, " ", float64(fromHex(head.targetDiff)))
+	// 48,807,487,244.68
+	fmt.Println("target difficulty: ", head.targetDiff1)
+	fmt.Println("target difficulty: ", difficult, "(converted)")
+
+	fmt.Println("nonce: ", fromHex(head.nonce))
 	//fmt.Println("variable length: ", varLengthNumTrans)
 	fmt.Println("number of transactions: ", fromHex(head.numTransactions))
 }
