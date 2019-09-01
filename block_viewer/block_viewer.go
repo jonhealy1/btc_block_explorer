@@ -1,4 +1,5 @@
 package main
+
 import "fmt"
 import "net/http"
 import "io/ioutil"
@@ -28,8 +29,11 @@ type transaction struct {
 	lockTime string
 }
 
-var byteC int
+var byteCounter int
 var head header
+
+//https://blockchain.info/block/000000000000000001f942eb4bfa0aeccb6a14c268f4c72d5fff17270da771b9?format=hex
+//100 inputs: 000000000000000001643f7706f3dcbc3a386e4c1bfba852ff628d8024f875b6
 
 func main() {
 
@@ -41,132 +45,128 @@ func main() {
 	fmt.Println("-------------------------------")
 	fmt.Println()
 	
-	// https://blockchain.info/block/000000000000000001f942eb4bfa0aeccb6a14c268f4c72d5fff17270da771b9?format=hex
-	
+	/* get raw block data from blockchain.com  */
 	URL := "https://blockchain.info/block/" + arg + "?format=hex"
 	resp, _ := http.Get(URL)
 	testBlock, _ := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()	
 	
+	/* build and display header */
 	buildHeader(testBlock)
 	displayHeader()
 
-	////////////////start transaction loop////////////////////////////////
-
 	var transactions [25]transaction
 
+	/////////////////////////start transaction loop////////////////////////////////
 	for i:=1; i<=5; i++ {
 
-		transactions[i].transVersion = convertEndian(string(testBlock[byteC:byteC+8]))
-		byteC += 8
+		transactions[i].transVersion = convertEndian(string(testBlock[byteCounter:byteCounter+8]))
+		byteCounter += 8
+		transactions[i].numInputs = convertEndian(string(testBlock[byteCounter:byteCounter+2]))
+		byteCounter += 2
 
 		//////////////////////start number of inputs loop////////////////////
-	 
-		transactions[i].numInputs = convertEndian(string(testBlock[byteC:byteC+2]))
-		byteC += 2
-
+		/* loop throught the number of inputs to display previous transactions */
 		for k:=1;k<=fromHex(transactions[i].numInputs);k++ {
-			//fmt.Println("***Input ", i, "***")
-			transactions[i].prevTrans[k] = convertEndian(string(testBlock[byteC:byteC+64]))
-			byteC += 64
-			transactions[i].transIndex = convertEndian(string(testBlock[byteC:byteC+8]))
-			byteC += 8
-			//account for variable langth
-			scriptLengthVar := convertEndian(string(testBlock[byteC:byteC+2]))
-			//fmt.Println(scriptLengthVar)
+			transactions[i].prevTrans[k] = convertEndian(string(testBlock[byteCounter:byteCounter+64]))
+			byteCounter += 64
+			transactions[i].transIndex = convertEndian(string(testBlock[byteCounter:byteCounter+8]))
+			byteCounter += 8
+			// account for variable langth
+			scriptLengthVar := convertEndian(string(testBlock[byteCounter:byteCounter+2]))
     		if scriptLengthVar!="fd" && scriptLengthVar!="fe" && scriptLengthVar!="ff" {
-				transactions[i].scriptLength = convertEndian(string(testBlock[byteC:byteC+2]))
-				byteC += 2
+				transactions[i].scriptLength = convertEndian(string(testBlock[byteCounter:byteCounter+2]))
+				byteCounter += 2
 			} else {
 				jump := varLength(scriptLengthVar)
-				transactions[i].scriptLength = convertEndian(string(testBlock[byteC+2:byteC+jump]))
-				byteC += jump
+				transactions[i].scriptLength = convertEndian(string(testBlock[byteCounter+2:byteCounter+jump]))
+				byteCounter += jump
 			}
-			byteC += fromHex(transactions[i].scriptLength)*2
-			byteC += 8
+			byteCounter += fromHex(transactions[i].scriptLength)*2
+			byteCounter += 8
 		}
-
 		//////////////////////end number of inputs loop////////////////////
-
-		transactions[i].numOutputs = convertEndian(string(testBlock[byteC:byteC+2]))
-		byteC += 2
+	
+		transactions[i].numOutputs = convertEndian(string(testBlock[byteCounter:byteCounter+2]))
+		byteCounter += 2
 
 		fmt.Println("-------------------------------")
 		fmt.Println("Transaction", i, "Inputs")
 		fmt.Println("-------------------------------")
 
+		/* display transaction inputs */
 		displayTransactionInputs(transactions[i])
 
+		/* build and display transaction outputs. one block for every output */
 		buildOutput(i, transactions[i], testBlock)
 	}
 	////////////////end transaction loop////////////////////////////////	
 }
 
+/* iterate and build the transaction outputs */
 func buildOutput(i int, transactions transaction, testBlock []byte) {
 	for j:=1;j<=fromHex(transactions.numOutputs);j++ {
-		transactions.amountBTC = convertEndian(string(testBlock[byteC:byteC+16]))
-		byteC += 16
-		transactions.pkScript_length = convertEndian(string(testBlock[byteC:byteC+2]))
-		byteC += 2
-		//fmt.Println(string(testBlock[byteC:byteC+6]))
-		byteC += 6 //???????????????
+		transactions.amountBTC = convertEndian(string(testBlock[byteCounter:byteCounter+16]))
+		byteCounter += 16
+		transactions.pkScript_length = convertEndian(string(testBlock[byteCounter:byteCounter+2]))
+		byteCounter += 2
+		byteCounter += 6
 		jump := fromHex(transactions.pkScript_length) *2 -6 -4
-		transactions.pkScript = string(testBlock[byteC:byteC+jump])
-		byteC += jump
-		//fmt.Println(convertEndian(string(testBlock[byteC:byteC+4]))) //lock time + 88ac
-		byteC += 4
+		transactions.pkScript = string(testBlock[byteCounter:byteCounter+jump])
+		byteCounter += jump
+		//fmt.Println(convertEndian(string(testBlock[byteCounter:byteCounter+4]))) //lock time + 88ac
+		byteCounter += 4
 		numberOutputs := fromHex(transactions.numOutputs)
 		if j==numberOutputs {
-			byteC += 8 //lock time - just at end of outputs
+			byteCounter += 8 //lock time - just at end of outputs
 		}
 		fmt.Println("-------------------------------")
 		fmt.Println("Transaction", i, "Output", j, "/", numberOutputs )
 		fmt.Println("-------------------------------")
-
-		//100 inputs: 000000000000000001643f7706f3dcbc3a386e4c1bfba852ff628d8024f875b6
 		displayTransactionOutputs(transactions)			
 	}
 }
 
+/* iterate and extract the header information */
 func buildHeader(testBlock []byte) {
-	byteC += 8
-	head.prevBlock = convertEndian(string(testBlock[byteC:byteC+64]))
-	byteC += 64
-	head.merkleRoot = convertEndian(string(testBlock[byteC:byteC+64]))
-	head.merkleRootTest = string(testBlock[byteC:byteC+64])
-	byteC += 64
-	head.timeStamp = convertEndian(string(testBlock[byteC:byteC+8]))
-	byteC += 8
-	head.targetDiff = convertEndian(string(testBlock[byteC:byteC+8]))
-	byteC += 8
-	head.nonce = convertEndian(string(testBlock[byteC:byteC+8]))
-	byteC += 8
+	byteCounter += 8
+	head.prevBlock = convertEndian(string(testBlock[byteCounter:byteCounter+64]))
+	byteCounter += 64
+	head.merkleRoot = convertEndian(string(testBlock[byteCounter:byteCounter+64]))
+	head.merkleRootTest = string(testBlock[byteCounter:byteCounter+64])
+	byteCounter += 64
+	head.timeStamp = convertEndian(string(testBlock[byteCounter:byteCounter+8]))
+	byteCounter += 8
+	head.targetDiff = convertEndian(string(testBlock[byteCounter:byteCounter+8]))
+	byteCounter += 8
+	head.nonce = convertEndian(string(testBlock[byteCounter:byteCounter+8]))
+	byteCounter += 8
 
 	//account for variable langth
-	varLengthNumTrans := convertEndian(string(testBlock[byteC:byteC+2]))
-
+	varLengthNumTrans := convertEndian(string(testBlock[byteCounter:byteCounter+2]))
 	if varLengthNumTrans!="fd" && varLengthNumTrans!="fe" && varLengthNumTrans!="ff" {
-		head.numTransactions = convertEndian(string(testBlock[byteC:byteC+2]))
-		byteC += 2
+		head.numTransactions = convertEndian(string(testBlock[byteCounter:byteCounter+2]))
+		byteCounter += 2
 	} else {
 		jump := varLength(varLengthNumTrans)
-		head.numTransactions = convertEndian(string(testBlock[byteC+2:byteC+jump]))
-		byteC += jump
+		head.numTransactions = convertEndian(string(testBlock[byteCounter+2:byteCounter+jump]))
+		byteCounter += jump
 	}
 }
 
+/* display transaction input block and iterate through the number of inputs
+showing each previous transaction */
 func displayTransactionInputs(transactions transaction) {
 	fmt.Println("version number: ", fromHex(transactions.transVersion))
 	numberInputs := fromHex(transactions.numInputs)
 	fmt.Println("number of inputs: ", numberInputs)
-	///previous transactions loop start/////////
 	for p:=1; p<=numberInputs; p++ {
 		fmt.Println("previous transaction",p, ":", transactions.prevTrans[p])
 	}
 }
 
+/* display a separate block for each transaction output */
 func displayTransactionOutputs(transactions transaction) {
-	//fmt.Println("transaction index: ", transactions.transIndex)
 	fmt.Println("script length: ", fromHex(transactions.scriptLength), "bytes")
 	fmt.Println("number of outputs: ", fromHex(transactions.numOutputs))
 	fmt.Println("amount: ", float64(fromHex(transactions.amountBTC))/100000000, "BTC")
@@ -174,12 +174,12 @@ func displayTransactionOutputs(transactions transaction) {
 	fmt.Println("receiver address: ", transactions.pkScript, "(hash 160)")
 }
 
+/* display header - self explanatory */
 func displayHeader() {
 	fmt.Println("-------------------------------")
 	fmt.Println("Header")
 	fmt.Println("-------------------------------")
 	fmt.Println("previous block: ", head.prevBlock)
-	//fmt.Println("merkle root test: ", head.merkleRootTest)
 	fmt.Println("merkle root: ", head.merkleRoot)
 	timeStamp := fromHex(head.timeStamp)
 	fmt.Println("timestamp: ", timeStamp, "(unix time)")
@@ -191,6 +191,8 @@ func displayHeader() {
 	fmt.Println("number of transactions: ", fromHex(head.numTransactions))
 }
 
+/* convertEndian takes a string and converts it from big endian 
+to little or vice versa. ex. a1bd => bda1 */
 func convertEndian (conversion string) string{
 	var convertEndian string
 	for i:=0; i < len(conversion); i=i+2 {
@@ -200,18 +202,24 @@ func convertEndian (conversion string) string{
 	return convertEndian
 }
 
+/* varLength deals with variable length in a Bitcoin block. 
+for example if the varLength byte is fd then there are 2 bytes
+after that expressing the size of the number. If the varLength 
+byte is not fd, fe, or ff then the number is represented by one byte */
 func varLength (conversion string) int {
-	var byteC int
+	var byteCounter int
 	if conversion=="fd"{
-		byteC = 6
+		byteCounter = 6
 	} else if conversion=="fe"{
-		byteC = 10
+		byteCounter = 10
 	} else if conversion=="ff"{
-		byteC = 18
+		byteCounter = 18
 	} 
-	return byteC
+	return byteCounter
 }
 
+/* fromHex function just converts a a hex string into a regular number.
+ex. 10a1 => 4257 */
 func fromHex (conversion string) int {
 	var convertEndianed int
 	var multiple int
@@ -221,15 +229,15 @@ func fromHex (conversion string) int {
 			multiple = int(conversion[i]) -87
 		} else {
 			multiple = int(conversion[i]) -48
-		}
-		
+		}	
 		amount = (multiple * findPower(16, len(conversion) -i -1))
 		convertEndianed += amount
 	}
-	//fmt.Println(convertEndianed)
 	return convertEndianed
 }
 
+/* the findPower function simply returns a^b - 
+this is the only code that I didn't write myself */
 func findPower(a, b int) int {
 	p := 1
 	for b > 0 {

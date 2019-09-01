@@ -37,7 +37,3 @@ func TestConvertEndian(t *testing.T) {
 		t.Error("Expected befeb8fcf8e672e028c5c30334b5c42b85c8bd9386bdf794d015b6558f73dc79 to equal 79dc738f55b615d094f7bd8693bdc8852bc4b53403c3c528e072e6f8fcb8febe")
 	}
 }
-
-// func TestVarLength(t *testing.T) {
-
-// }
