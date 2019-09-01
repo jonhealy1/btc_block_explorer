@@ -99,32 +99,36 @@ func main() {
 
 		/////////////////start of outputs loop////////////////
 
-		for j:=1;j<=fromHex(transactions[i].numOutputs);j++ {
-			transactions[i].amountBTC = convertEndian(string(testBlock[byteC:byteC+16]))
-			byteC += 16
-			transactions[i].pkScript_length = convertEndian(string(testBlock[byteC:byteC+2]))
-			byteC += 2
-			//fmt.Println(string(testBlock[byteC:byteC+6]))
-			byteC += 6 //???????????????
-			jump := fromHex(transactions[i].pkScript_length) *2 -6 -4
-			transactions[i].pkScript = string(testBlock[byteC:byteC+jump])
-			byteC += jump
-			//fmt.Println(convertEndian(string(testBlock[byteC:byteC+4]))) //lock time + 88ac
-			byteC += 4
-			numberOutputs := fromHex(transactions[i].numOutputs)
-			if j==numberOutputs {
-				byteC += 8 //lock time - just at end of outputs
-			}
-			fmt.Println("-------------------------------")
-			fmt.Println("Transaction", i, "Output", j, "/", numberOutputs )
-			fmt.Println("-------------------------------")
-	
-			//100 inputs: 000000000000000001643f7706f3dcbc3a386e4c1bfba852ff628d8024f875b6
-			displayTransactionOutputs(transactions[i])			
-		}
+		buildOutput(i, transactions[i], testBlock)
 		//////////////end of outputs loop////////////////
 	}
 	////////////////end transaction loop////////////////////////////////	
+}
+
+func buildOutput(i int, transactions transaction, testBlock []byte) {
+	for j:=1;j<=fromHex(transactions.numOutputs);j++ {
+		transactions.amountBTC = convertEndian(string(testBlock[byteC:byteC+16]))
+		byteC += 16
+		transactions.pkScript_length = convertEndian(string(testBlock[byteC:byteC+2]))
+		byteC += 2
+		//fmt.Println(string(testBlock[byteC:byteC+6]))
+		byteC += 6 //???????????????
+		jump := fromHex(transactions.pkScript_length) *2 -6 -4
+		transactions.pkScript = string(testBlock[byteC:byteC+jump])
+		byteC += jump
+		//fmt.Println(convertEndian(string(testBlock[byteC:byteC+4]))) //lock time + 88ac
+		byteC += 4
+		numberOutputs := fromHex(transactions.numOutputs)
+		if j==numberOutputs {
+			byteC += 8 //lock time - just at end of outputs
+		}
+		fmt.Println("-------------------------------")
+		fmt.Println("Transaction", i, "Output", j, "/", numberOutputs )
+		fmt.Println("-------------------------------")
+
+		//100 inputs: 000000000000000001643f7706f3dcbc3a386e4c1bfba852ff628d8024f875b6
+		displayTransactionOutputs(transactions)			
+	}
 }
 
 func buildHeader(testBlock []byte) {
