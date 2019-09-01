@@ -64,9 +64,6 @@ func main() {
 		transactions[i].transVersion = convertEndian(string(testBlock[byteCounter:byteCounter+8]))
 		byteCounter += 8
 
-		// transactions[i].numInputs = convertEndian(string(testBlock[byteCounter:byteCounter+2]))
-		// byteCounter += 2
-
 		/* account for variable length and find the number of inputs */
 		varLengthNumTrans := convertEndian(string(testBlock[byteCounter:byteCounter+2]))
 		if varLengthNumTrans!="fd" && varLengthNumTrans!="fe" && varLengthNumTrans!="ff" {
@@ -101,9 +98,6 @@ func main() {
 			byteCounter += 8
 		}
 		//////////////////////end number of inputs loop////////////////////
-	
-		// transactions[i].numOutputs = convertEndian(string(testBlock[byteCounter:byteCounter+2]))
-		// byteCounter += 2
 
 		/* account for variable length and find the number of outputs */
 		varLengthNumTrans2 := convertEndian(string(testBlock[byteCounter:byteCounter+2]))
@@ -218,8 +212,6 @@ func displayHeader() {
 	fmt.Println("timestamp: ", timeNotUnix, "(converted)")
 	//difficulty
 	difficult := float64(65535 / float64(fromHex(head.targetDiff2)) * float64(findPower(2,40)))
-	//fmt.Println("Difficulty: ", difficult, " ", float64(fromHex(head.targetDiff)))
-	// 48,807,487,244.68
 	fmt.Println("target difficulty: ", head.targetDiff1)
 	fmt.Println("target difficulty: ", difficult, "(converted)")
 
