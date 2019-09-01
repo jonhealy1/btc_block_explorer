@@ -1,13 +1,9 @@
 package main
 import "fmt"
-//import "encoding/hex"
 import "net/http"
 import "io/ioutil"
-//import "bufio"
 import "os"
-//import "strings"
 import "time"
-//import "strconv"
 
 type header struct {
 	prevBlock string
@@ -32,36 +28,25 @@ type transaction struct {
 	lockTime string
 }
 
-func main() {
+var byteC int
 
-	byteC := 0
+func main() {
 
 	arg := os.Args[1]
 
-	// reader := bufio.NewReader(os.Stdin)
 	fmt.Println()
 	fmt.Println("-------------------------------")
 	fmt.Println("Welcome to Bitcoin Block Viewer")
 	fmt.Println("-------------------------------")
 	fmt.Println()
-	// fmt.Println("Enter block hash: ")
-
-	// text, _ := reader.ReadString('\n')
-	// text = strings.TrimSuffix(text, "\n")
-	// text := "000000000000000001f942eb4bfa0aeccb6a14c268f4c72d5fff17270da771b9"
+	
+	// https://blockchain.info/block/000000000000000001f942eb4bfa0aeccb6a14c268f4c72d5fff17270da771b9?format=hex
+	
 	URL := "https://blockchain.info/block/" + arg + "?format=hex"
 	resp, _ := http.Get(URL)
-	
 	testBlock, _ := ioutil.ReadAll(resp.Body)
-
 	resp.Body.Close()
-	fmt.Println()
-	fmt.Println()
-
-
-	fmt.Println("-------------------------------")
-	fmt.Println("Header")
-	fmt.Println("-------------------------------")
+	
 	var head header
 	byteC += 8
 	head.prevBlock = convertEndian(string(testBlock[byteC:byteC+64]))
@@ -87,24 +72,12 @@ func main() {
 		head.numTransactions = convertEndian(string(testBlock[byteC+2:byteC+jump]))
 		byteC += jump
 	}
-
 	
-	fmt.Println("previous block: ", head.prevBlock)
-	fmt.Println("merkle root test: ", head.merkleRootTest)
-	fmt.Println("merkle root: ", head.merkleRoot)
-	timeStamp := fromHex(head.timeStamp)
-	fmt.Println("timestamp: ", timeStamp, "(unix time)")
-
-    timeNotUnix := time.Unix(int64(timeStamp), 0)
-    fmt.Println("timestamp: ", timeNotUnix, "(converted)")
-	fmt.Println("target difficulty: ", head.targetDiff)
-	fmt.Println("nonce: ", head.nonce)
-	fmt.Println("variable length: ", varLengthNumTrans)
-	fmt.Println("number of transactions: ", fromHex(head.numTransactions))
+	displayHeader(head)
 
 	////////////////start transaction loop////////////////////////////////
 
-	var transactions [15]transaction
+	var transactions [25]transaction
 
 	for i:=1; i<=5; i++ {
 
@@ -146,13 +119,8 @@ func main() {
 		fmt.Println("Transaction", i, "Inputs")
 		fmt.Println("-------------------------------")
 
-		fmt.Println("version number: ", fromHex(transactions[i].transVersion))
-		numberInputs := fromHex(transactions[i].numInputs)
-		fmt.Println("number of inputs: ", numberInputs)
-		///previous transactions loop start/////////
-		for p:=1; p<=numberInputs; p++ {
-			fmt.Println("previous transaction",p, ":", transactions[i].prevTrans[p])
-		}
+		displayTransactionInputs(transactions[i])
+
 		/////////////////start of outputs loop////////////////
 
 		for j:=1;j<=fromHex(transactions[i].numOutputs);j++ {
@@ -176,38 +144,56 @@ func main() {
 			fmt.Println("-------------------------------")
 	
 			//100 inputs: 000000000000000001643f7706f3dcbc3a386e4c1bfba852ff628d8024f875b6
-
-			///previous transactions loop end///////
-			fmt.Println("transaction index: ", transactions[i].transIndex)
-			fmt.Println("script length: ", fromHex(transactions[i].scriptLength), "bytes")
-			fmt.Println("number of outputs: ", numberOutputs)
-			fmt.Println("amount: ", fromHex(transactions[i].amountBTC))
-			fmt.Println("amount: ", transactions[i].amountBTC)
-			fmt.Println("amount: ", float64(fromHex(transactions[i].amountBTC))/100000000, "BTC")
-			fmt.Println("pk_script length: ", fromHex(transactions[i].pkScript_length), "bytes")
-			fmt.Println("receiver address: ", transactions[i].pkScript, "(hash 160)")
+			displayTransactionOutputs(transactions[i])			
 		}
 		//////////////end of outputs loop////////////////
-
 	}
-	////////////////end transaction loop////////////////////////////////
+	////////////////end transaction loop////////////////////////////////	
+}
 
-	//scriptJump := fromHex(transactions[i].scriptLength)
-	//byteC += fromHex(transactions[i].scriptLength)
-	//fromHex(head.numTransactions)
-	//convertEndian(head.prevBlock)
-	// https://blockchain.info/block/000000000000000001f942eb4bfa0aeccb6a14c268f4c72d5fff17270da771b9?format=hex
-	//fmt.Println(fromHex("aa"))
+func displayTransactionInputs(transactions transaction) {
+	fmt.Println("version number: ", fromHex(transactions.transVersion))
+	numberInputs := fromHex(transactions.numInputs)
+	fmt.Println("number of inputs: ", numberInputs)
+	///previous transactions loop start/////////
+	for p:=1; p<=numberInputs; p++ {
+		fmt.Println("previous transaction",p, ":", transactions.prevTrans[p])
+	}
+}
+
+func displayTransactionOutputs(transactions transaction) {
+	//fmt.Println("transaction index: ", transactions.transIndex)
+	fmt.Println("script length: ", fromHex(transactions.scriptLength), "bytes")
+	fmt.Println("number of outputs: ", fromHex(transactions.numOutputs))
+	fmt.Println("amount: ", float64(fromHex(transactions.amountBTC))/100000000, "BTC")
+	fmt.Println("pk_script length: ", fromHex(transactions.pkScript_length), "bytes")
+	fmt.Println("receiver address: ", transactions.pkScript, "(hash 160)")
+}
+
+func displayHeader(head header) {
+	fmt.Println("-------------------------------")
+	fmt.Println("Header")
+	fmt.Println("-------------------------------")
+	fmt.Println("previous block: ", head.prevBlock)
+	//fmt.Println("merkle root test: ", head.merkleRootTest)
+	fmt.Println("merkle root: ", head.merkleRoot)
+	timeStamp := fromHex(head.timeStamp)
+	fmt.Println("timestamp: ", timeStamp, "(unix time)")
+    timeNotUnix := time.Unix(int64(timeStamp), 0)
+    fmt.Println("timestamp: ", timeNotUnix, "(converted)")
+	fmt.Println("target difficulty: ", head.targetDiff)
+	fmt.Println("nonce: ", head.nonce)
+	//fmt.Println("variable length: ", varLengthNumTrans)
+	fmt.Println("number of transactions: ", fromHex(head.numTransactions))
 }
 
 func convertEndian (conversion string) string{
-	var convertEndianed string
+	var convertEndian string
 	for i:=0; i < len(conversion); i=i+2 {
-		convertEndianed = convertEndianed + string(conversion[len(conversion) -i -2])
-		convertEndianed = convertEndianed + string(conversion[len(conversion) -i -1])	
+		convertEndian = convertEndian + string(conversion[len(conversion) -i -2])
+		convertEndian = convertEndian + string(conversion[len(conversion) -i -1])	
 	}
-	//fmt.Println(convertEndianed)
-	return convertEndianed
+	return convertEndian
 }
 
 func varLength (conversion string) int {
