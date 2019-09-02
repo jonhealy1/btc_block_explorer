@@ -5,6 +5,9 @@ import "net/http"
 import "io/ioutil"
 import "os"
 import "time"
+//import "crypto/sha256"
+//import "encoding/hex"
+import "github.com/anaskhan96/base58check"
 
 type header struct {
 	prevBlock string
@@ -28,6 +31,7 @@ type transaction struct {
 	pkScript_length string
 	pkScript string
 	lockTime string
+	address string
 }
 
 var byteCounter int
@@ -38,15 +42,14 @@ var head header
 
 func main() {
 
-	arg := os.Args[1]
-
 	fmt.Println()
 	fmt.Println("-------------------------------")
 	fmt.Println("Welcome to Bitcoin Block Viewer")
 	fmt.Println("-------------------------------")
 	fmt.Println()
 	
-	/* get raw block data from blockchain.com  */
+	/* get block hash from command line then raw block data from blockchain.com  */
+	arg := os.Args[1]
 	URL := "https://blockchain.info/block/" + arg + "?format=hex"
 	resp, _ := http.Get(URL)
 	testBlock, _ := ioutil.ReadAll(resp.Body)
@@ -57,9 +60,9 @@ func main() {
 	displayHeader()
 
 	var transactions [25]transaction
-
+    numberOfTransactionsToDisplay := 5
 	/////////////////////////start transaction loop////////////////////////////////
-	for i:=1; i<=5; i++ {
+	for i:=1; i<=numberOfTransactionsToDisplay; i++ {
 
 		transactions[i].transVersion = convertEndian(string(testBlock[byteCounter:byteCounter+8]))
 		byteCounter += 8
@@ -119,17 +122,21 @@ func main() {
 
 		/* build and display transaction outputs. one block for every output */
 		buildOutput(i, transactions[i], testBlock)
+
+		
 	}
 	////////////////end transaction loop////////////////////////////////	
 }
 
-func buildVarLength() {
-
+func convertHash160(input string) string{
+	encoded, _ := base58check.Encode("00", input)
+	return encoded
 }
 
 /* iterate and build the transaction outputs */
 func buildOutput(i int, transactions transaction, testBlock []byte) {
-	for j:=1;j<=fromHex(transactions.numOutputs);j++ {
+	numberOutputs := fromHex(transactions.numOutputs)
+	for j:=1;j<=numberOutputs;j++ {
 		transactions.amountBTC = convertEndian(string(testBlock[byteCounter:byteCounter+16]))
 		byteCounter += 16
 		transactions.pkScript_length = convertEndian(string(testBlock[byteCounter:byteCounter+2]))
@@ -137,9 +144,10 @@ func buildOutput(i int, transactions transaction, testBlock []byte) {
 		byteCounter += 6
 		jump := fromHex(transactions.pkScript_length) *2 -6 -4
 		transactions.pkScript = string(testBlock[byteCounter:byteCounter+jump])
+		transactions.address = convertHash160(transactions.pkScript)
 		byteCounter += jump
 		byteCounter += 4
-		numberOutputs := fromHex(transactions.numOutputs)
+				
 		if j==numberOutputs {
 			byteCounter += 8 //lock time - just at end of outputs
 		}
@@ -197,6 +205,8 @@ func displayTransactionOutputs(transactions transaction) {
 	fmt.Println("amount: ", float64(fromHex(transactions.amountBTC))/100000000, "BTC")
 	fmt.Println("pk_script length: ", fromHex(transactions.pkScript_length), "bytes")
 	fmt.Println("receiver address: ", transactions.pkScript, "(hash 160)")
+	fmt.Println("receiver address: ", transactions.address, "(base58)")
+	
 }
 
 /* display header - self explanatory */
