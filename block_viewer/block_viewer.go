@@ -5,8 +5,6 @@ import "net/http"
 import "io/ioutil"
 import "os"
 import "time"
-//import "crypto/sha256"
-//import "encoding/hex"
 import "github.com/anaskhan96/base58check"
 
 type header struct {
